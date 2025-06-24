@@ -19,9 +19,13 @@ use Iceshell21\Jwt\Exception\JwtExceptionInterface;
 class JwtManager
 {
     private const ALGORITHM_HS256 = 'HS256';
+    private const ALGORITHM_HS384 = 'HS384';
+    private const ALGORITHM_HS512 = 'HS512';
+
     private const SUPPORTED_ALGORITHMS = [
-        self::ALGORITHM_HS256 => 'hash_hmac_sha256',
-        // Add other algorithms here, e.g., 'HS384' => 'hash_hmac_sha384', 'HS512' => 'hash_hmac_sha512'
+        self::ALGORITHM_HS256 => 'sha256',
+        self::ALGORITHM_HS384 => 'sha384',
+        self::ALGORITHM_HS512 => 'sha512',
     ];
 
     private string $secretKey;
@@ -219,21 +223,18 @@ class JwtManager
     {
         if (!isset(self::SUPPORTED_ALGORITHMS[$algorithm])) {
             // This should ideally be caught by constructor or header check, but good for defense.
+            // The constructor already validates the algorithm for the manager instance.
+            // This check here is more for the algorithm specified in a token being parsed,
+            // if sign is called by verify.
             throw new \InvalidArgumentException("Unsupported signing algorithm: {$algorithm}");
         }
 
-        $phpAlgorithm = '';
-        switch ($algorithm) {
-            case self::ALGORITHM_HS256:
-                $phpAlgorithm = 'sha256';
-                break;
-            // Add cases for HS384, HS512 if they are added to SUPPORTED_ALGORITHMS
-            // e.g. case 'HS384': $phpAlgorithm = 'sha384'; break;
-            default:
-                throw new \InvalidArgumentException("Algorithm '{$algorithm}' has no defined hash function for signing in this manager.");
-        }
+        $phpHashAlgorithm = self::SUPPORTED_ALGORITHMS[$algorithm];
 
-        return hash_hmac($phpAlgorithm, $data, $key, true);
+        // All currently supported algorithms (HS256, HS384, HS512) use hash_hmac.
+        // If other types of algorithms were added (e.g., RSA, EC), a switch or more complex logic
+        // would be needed here to determine whether to use hash_hmac, openssl_sign, etc.
+        return hash_hmac($phpHashAlgorithm, $data, $key, true);
     }
 
     /**
