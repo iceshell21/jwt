@@ -49,8 +49,9 @@ use Iceshell21\Jwt\JwtManager;
 use Iceshell21\Jwt\Exception\JwtExceptionInterface; // Catch specific exceptions or the base interface
 
 // Replace 'your-super-secret-key' with a strong, unique secret key
-$secretKey = 'your-super-secret-key_for-HS256_must-be-long-and-random';
-$algorithm = 'HS256'; // Currently only HS256 is implemented directly
+$secretKey = 'your-super-secret-key_must-be-long-and-random';
+// Supported algorithms: 'HS256', 'HS384', 'HS512'
+$algorithm = 'HS256'; // Default, or choose 'HS384', 'HS512'
 $tokenLifetime = 3600; // 1 hour in seconds
 
 try {
@@ -178,14 +179,30 @@ if ($isValid) {
 
 ## Supported Algorithms
 
-Currently, the library's direct implementation focuses on `HS256` (HMAC using SHA-256).
-The structure (`SUPPORTED_ALGORITHMS` map and `sign`/`verify` methods) allows for adding more algorithms:
-1.  Add the algorithm identifier (e.g., `HS384`, `HS512`) and its corresponding PHP `hash_hmac` algorithm name (e.g., `sha384`, `sha512`) to the `SUPPORTED_ALGORITHMS` constant in `JwtManager.php`.
-2.  Extend the `switch` statement within the `sign()` method in `JwtManager.php` to map your new JWT algorithm identifier to the PHP internal hash algorithm name.
-3.  For asymmetric algorithms (like RS256, ES256), this would be more involved, requiring:
-    *   Handling of public and private keys (passed to constructor or sign/verify methods).
-    *   Using functions like `openssl_sign()` and `openssl_verify()`.
-    *   The `SUPPORTED_ALGORITHMS` map would need to store information about how to handle these (e.g., OpenSSL algorithm constants).
+The library currently supports the following HMAC-based algorithms:
+- `HS256` (HMAC using SHA-256) - Default
+- `HS384` (HMAC using SHA-384)
+- `HS512` (HMAC using SHA-512)
+
+You can specify the algorithm when creating an instance of `JwtManager`:
+```php
+$jwtManagerHS384 = new JwtManager($secretKey, 'HS384');
+$tokenHS384 = $jwtManagerHS384->generate(['data' => 'signed with HS384']);
+
+$jwtManagerHS512 = new JwtManager($secretKey, 'HS512');
+$tokenHS512 = $jwtManagerHS512->generate(['data' => 'signed with HS512']);
+```
+
+### Adding More Algorithms
+The internal structure (`SUPPORTED_ALGORITHMS` map and `sign`/`verify` methods) is designed primarily for HMAC-based algorithms using PHP's `hash_hmac` function.
+To add more HMAC-based algorithms (e.g., if new SHA variants become common for JWTs):
+1.  Add the new JWT algorithm identifier (e.g., `HSXXX`) and its corresponding PHP `hash_hmac` algorithm string (e.g., `shaXXX`) to the `SUPPORTED_ALGORITHMS` array in `JwtManager.php`.
+    The `sign` method will automatically use it with `hash_hmac`.
+
+For asymmetric algorithms (like `RS256`, `ES256`), this would be a more significant change:
+*   **Key Management**: Requires handling of public and private keys (passed to constructor or specific methods).
+*   **Cryptographic Functions**: Would need to use functions like `openssl_sign()` and `openssl_verify()`.
+*   **Class Design**: The `JwtManager` might need changes to accommodate different key types and signing/verification logic for asymmetric crypto. This is currently out of scope for the simple HMAC implementation.
 
 ## Running Tests
 

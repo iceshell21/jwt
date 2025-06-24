@@ -59,6 +59,42 @@ class JwtManagerTest extends TestCase
         $this->assertGreaterThanOrEqual(time() + $lifetime - 5, $decodedPayload->exp); // Allow 5s leeway
     }
 
+    public function testGenerateAndParseTokenWithHS384(): void
+    {
+        $manager = new JwtManager(self::TEST_SECRET, 'HS384', self::DEFAULT_LIFETIME);
+        $payload = ['data' => 'hs384 test', 'uid' => 384];
+        $token = $manager->generate($payload);
+
+        $this->assertMatchesRegularExpression('/^[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+$/', $token);
+
+        $decodedPayload = $manager->parse($token);
+        $this->assertEquals('hs384 test', $decodedPayload->data);
+        $this->assertEquals(384, $decodedPayload->uid);
+
+        // Test validation with a manager configured for HS256 fails
+        $this->expectException(InvalidTokenException::class);
+        $this->expectExceptionMessage("Token algorithm 'HS384' does not match manager's configured algorithm 'HS256'.");
+        $this->jwtManager->parse($token); // jwtManager is configured for HS256
+    }
+
+    public function testGenerateAndParseTokenWithHS512(): void
+    {
+        $manager = new JwtManager(self::TEST_SECRET, 'HS512', self::DEFAULT_LIFETIME);
+        $payload = ['data' => 'hs512 test', 'uid' => 512];
+        $token = $manager->generate($payload);
+
+        $this->assertMatchesRegularExpression('/^[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+$/', $token);
+
+        $decodedPayload = $manager->parse($token);
+        $this->assertEquals('hs512 test', $decodedPayload->data);
+        $this->assertEquals(512, $decodedPayload->uid);
+
+        // Test validation with a manager configured for HS256 fails
+        $this->expectException(InvalidTokenException::class);
+        $this->expectExceptionMessage("Token algorithm 'HS512' does not match manager's configured algorithm 'HS256'.");
+        $this->jwtManager->parse($token); // jwtManager is configured for HS256
+    }
+
     public function testParseExpiredToken(): void
     {
         $this->expectException(ExpiredTokenException::class);
@@ -278,6 +314,55 @@ class JwtManagerTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Unsupported algorithm: FOO123.'); // Message includes the list
         new JwtManager('secret', 'FOO123');
+    }
+
+    public function testConstructorWithHS384Algorithm(): void
+    {
+        $manager = new JwtManager(self::TEST_SECRET, 'HS384');
+        $token = $manager->generate(['data' => 'test']);
+        $payload = $manager->parse($token);
+        $this->assertEquals('test', $payload->data);
+
+        // Check header alg
+        list($headerEncoded) = explode('.', $token);
+        $header = json_decode($this->base64UrlDecode($headerEncoded), true);
+        $this->assertEquals('HS384', $header['alg']);
+    }
+
+    public function testConstructorWithHS512Algorithm(): void
+    {
+        $manager = new JwtManager(self::TEST_SECRET, 'HS512');
+        $token = $manager->generate(['data' => 'test']);
+        $payload = $manager->parse($token);
+        $this->assertEquals('test', $payload->data);
+
+        // Check header alg
+        list($headerEncoded) = explode('.', $token);
+        $header = json_decode($this->base64UrlDecode($headerEncoded), true);
+        $this->assertEquals('HS512', $header['alg']);
+    }
+
+    public function testParseHS256TokenWithHS384ManagerFails(): void
+    {
+        $hs256Token = $this->jwtManager->generate(['data' => 'hs256-data']); // Default manager is HS256
+
+        $hs384Manager = new JwtManager(self::TEST_SECRET, 'HS384');
+
+        $this->expectException(InvalidTokenException::class);
+        $this->expectExceptionMessage("Token algorithm 'HS256' does not match manager's configured algorithm 'HS384'.");
+        $hs384Manager->parse($hs256Token);
+    }
+
+    public function testParseHS384TokenWithHS512ManagerFails(): void
+    {
+        $hs384Manager = new JwtManager(self::TEST_SECRET, 'HS384');
+        $hs384Token = $hs384Manager->generate(['data' => 'hs384-data']);
+
+        $hs512Manager = new JwtManager(self::TEST_SECRET, 'HS512');
+
+        $this->expectException(InvalidTokenException::class);
+        $this->expectExceptionMessage("Token algorithm 'HS384' does not match manager's configured algorithm 'HS512'.");
+        $hs512Manager->parse($hs384Token);
     }
 
     public function testParseTokenMissingExpClaim(): void
