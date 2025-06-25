@@ -1,6 +1,7 @@
 # Composer
 /vendor/
 composer.lock
+.php-cs-fixer.cache
 
 # PHPUnit
 /phpunit.xml

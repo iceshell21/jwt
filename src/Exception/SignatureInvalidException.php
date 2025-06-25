@@ -7,6 +7,4 @@ namespace Iceshell21\Jwt\Exception;
 /**
  * Exception thrown when a token's signature is invalid.
  */
-class SignatureInvalidException extends InvalidTokenException
-{
-}
+class SignatureInvalidException extends InvalidTokenException {}
