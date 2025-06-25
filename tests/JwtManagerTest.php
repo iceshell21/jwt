@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Iceshell21\Jwt\Tests;
 
-use Iceshell21\Jwt\JwtManager;
+use DateTimeImmutable;
+use Iceshell21\Jwt\Exception\BeforeValidTokenException;
 use Iceshell21\Jwt\Exception\ExpiredTokenException;
 use Iceshell21\Jwt\Exception\InvalidTokenException;
+use Iceshell21\Jwt\Exception\JwtExceptionInterface; // Keep if used, remove if not
 use Iceshell21\Jwt\Exception\SignatureInvalidException;
-use Iceshell21\Jwt\Exception\BeforeValidTokenException;
-use Iceshell21\Jwt\Exception\JwtExceptionInterface;
+use Iceshell21\Jwt\JwtManager;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
-use DateTimeImmutable;
+use RuntimeException;
 
 class JwtManagerTest extends TestCase
 {
@@ -304,14 +306,14 @@ class JwtManagerTest extends TestCase
 
     public function testConstructorWithEmptySecretThrowsException(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Secret key cannot be empty.');
         new JwtManager('');
     }
 
     public function testConstructorWithUnsupportedAlgorithmThrowsException(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unsupported algorithm: FOO123.'); // Message includes the list
         new JwtManager('secret', 'FOO123');
     }
@@ -472,7 +474,7 @@ class JwtManagerTest extends TestCase
         if ($decoded === false) {
             // This is a simplified check; JwtManager's internal method might be more robust
             // or throw its own specific exception. For this test helper, RuntimeException is fine.
-            throw new \RuntimeException("Test helper base64UrlDecode failed for data: $data");
+            throw new RuntimeException("Test helper base64UrlDecode failed for data: {$data}");
         }
         return $decoded;
     }
@@ -483,6 +485,6 @@ class JwtManagerTest extends TestCase
             return hash_hmac('sha256', $data, $key, true);
         }
         // Extend for other algorithms if JwtManager supports them and tests need them
-        throw new \InvalidArgumentException("Test helper signUsingJwtManagerInternals does not support algorithm: {$algorithm}");
+        throw new InvalidArgumentException("Test helper signUsingJwtManagerInternals does not support algorithm: {$algorithm}");
     }
 }
